@@ -52,7 +52,7 @@ cache buildCache(int numOfSets, int numOfLines, int blockSize)
 		newCache.sets[i] = set;
 		for (j = 0; j < numOfLines; ++j) 
 		{
-			line.last_used = line.validBit = line.tag = 0;
+			line.lastUsed = line.validBit = line.tag = 0;
 			set.lines[j] = line;
 		}
 		free(set);
@@ -74,127 +74,126 @@ void cleanup(cache cache_, int numOfSets, int numOfLines, int blockSize)
 	}
 }
 
-int find_empty_line(cache_set set_, cacheProperties propeties) {
+int findEmptyLine(cache_set set_, cacheProperties properties) {
 	int numOfLines = properties.E;
 	set_line line;
 
 	for (int i = 0; i < numOfLines; ++i)
 	{
 		line = set_.lines[i];
-		if (line.validBit == 0) {
+		if (line.validBit == 0) 
+		{
 			return i;
 		}
 	}
 }
 
-int find_evict_line(cache_set set_, cacheProperties par, int *used_lines) {
-	
-	//Returns index of least recently used line.
+//this function returns the index of the least used line
+int findLine2Evict(cache_set set_, cacheProperties properties, int *used_lines) 
+{
 	//used_lines[0] gives least recently used line, used_lines[1] gives current lru counter or most recently used line.
-	int numOfLines = par.E;
-	int max_used = set_.lines[0].last_used;
-	int min_used = set_.lines[0].last_used;
-	int min_used_index = 0;
+	int numOfLines = properties.E;
+	int mostUsed = set_.lines[0].lastUsed;
+	int leastUsed = set_.lines[0].lastUsed;
+	int leastUsedIndex = 0;
+	set_line line;
 
-	set_line line; 
-	int lineIndex;
+	for int (i = 1; i < numOfLines; ++i) {
+		line = set_.lines[i];
 
-	for (lineIndex = 1; lineIndex < numOfLines; lineIndex ++) {
-		line = set_.lines[lineIndex];
-
-		if (min_used > line.last_used) {
-			min_used_index = lineIndex;	
-			min_used = line.last_used;
+		if (leastUsed > line.lastUsed) {
+			leastUsedIndex = i;	
+			leastUsed = line.lastUsed;
 		}
 
-		if (max_used < line.last_used) {
-			max_used = line.last_used;
+		if (mostUsed < line.lastUsed) {
+			mostUsed = line.lastUsed;
 		}
 	}
 
-	used_lines[0] = min_used;
-	used_lines[1] = max_used;
-	return min_used_index;
+	used_lines[0] = leastUsed;
+	used_lines[1] = mostUsed;
+	return leastUsedIndex;
 }
 
-cacheProperties run_sim(cache sim_cache, cacheProperties par, unsigned long long address) {
+cacheProperties run_sim(cache simCache, cacheProperties properties, unsigned long long address) 
+{
 		
-		int lineIndex;
 		int cache_full = 1;
+		int numOfLines = properties.E;
+		int lastHit = properties.hits;
 
-		int numOfLines = par.E;
-		int prev_hits = par.hits;
-
-		int tag_size = (64 - (par.s + par.b));
-		unsigned long long input_tag = address >> (par.s + par.b);
-		unsigned long long temp = address << (tag_size);
-		unsigned long long setIndex = temp >> (tag_size + par.b);
+		int tagSize = (64 - (properties.s + properties.b));
+		unsigned long long inputTag = address >> (properties.s + properties.b);
+		unsigned long long setIndex = (address << tagSize) >> (tagSize + properties.b);
 		
-  		cache_set set_ = sim_cache.sets[setIndex];
+  		cache_set set_ = simCache.sets[setIndex];
 
-		for (lineIndex = 0; lineIndex < numOfLines; lineIndex ++) 	{
+		for (int i = 0; i < numOfLines; ++i) 	
+		{
 			
-			set_line line = set_.lines[lineIndex];
-			
-			if (line.validBit) {
-					
-				if (line.tag == input_tag) {
-						
-					line.last_used ++;
-					par.hits ++;
-					set_.lines[lineIndex] = line;
+			set_line line = set_.lines[i];
+			if (set_.lines[i].validBit)
+			{
+				if (set_line.[i].tag == inputTag)
+				{
+					++set_line.[i].lastUsed;
+					++properties.hits;
 				}
-
-			} else if (!(line.validBit) && (cache_full)) {
-				//We found an empty line
+			}
+			//a "blank line"
+			 else if (!(set_line.[i].validBit) && (cache_full)) 
+			{
 				cache_full = 0;		
 			}
-
 		}	
 
-		if (prev_hits == par.hits) {
+		if (lastHit == properties.hits) 
+		{
 			//Miss in cache;
-			par.misses++;
-		} else {
+			properties.misses++;
+		} 
+		else 
+		{
 			//Data is in cache
-			return par;
+			return properties;
 		}
 
 		//We missed, so evict if necessary and write data into cache.
 		
 		int *used_lines = (int*) malloc(sizeof(int) * 2);
-		int min_used_index = find_evict_line(set_, par, used_lines);	
+		int min_used_index = find_evict_line(set_, properties, used_lines);	
 
 		if (cache_full) 
 		{
-			par.evicts++;
+			properties.evicts++;
 
 			//Found least-recently-used line, overwrite it.
-			set_.lines[min_used_index].tag = input_tag;
-			set_.lines[min_used_index].last_used = used_lines[1] + 1;
+			set_.lines[min_used_index].tag = inputTag;
+			set_.lines[min_used_index].lastUsed = used_lines[1] + 1;
 		
 		}
 
 		else
 	        {
-			int empty_index = find_empty_line(set_, par);
+			int empty_index = findEmptyLine(set_, properties);
 
 			//Found first empty line, write to it.
-			set_.lines[empty_index].tag = input_tag;
+			set_.lines[empty_index].tag = inputTag;
 			set_.lines[empty_index].validBit = 1;
-			set_.lines[empty_index].last_used = used_lines[1] + 1;
+			set_.lines[empty_index].lastUsed = used_lines[1] + 1;
 		}						
 
 		free(used_lines);
-		return par;
+		return properties;
 }
 
 int main(int argc, char **argv)
 {
 	
-	cache sim_cache;
-	cacheProperties par;
-	bzero(&par, sizeof(par));
+	cache simCache;
+	cacheProperties properties;
+	bzero(&properties, sizeof(properties));
 
 	long long numOfSets;
 	long long blockSize;	
@@ -212,13 +211,13 @@ int main(int argc, char **argv)
         switch(c)
 		{
         case 's':
-            par.s = atoi(optarg);
+            properties.s = atoi(optarg);
             break;
         case 'E':
-            par.E = atoi(optarg);
+            properties.E = atoi(optarg);
             break;
         case 'b':
-            par.b = atoi(optarg);
+            properties.b = atoi(optarg);
             break;
         case 't':
             trace_file = optarg;
@@ -235,7 +234,7 @@ int main(int argc, char **argv)
         }
     }
 
-    if (par.s == 0 || par.E == 0 || par.b == 0 || trace_file == NULL) 
+    if (properties.s == 0 || properties.E == 0 || properties.b == 0 || trace_file == NULL) 
 	{
         printf("%s: Missing required command line argument\n", argv[0]);
         printUsage(argv);
@@ -244,13 +243,13 @@ int main(int argc, char **argv)
 
 	
 	// you need to compute S and B yourself
-	numOfSets = pow(2.0, par.s);
-	blockSize = power(par.b);	
-	par.hits = 0;
-	par.misses = 0;
-	par.evicts = 0;
+	numOfSets = pow(2.0, properties.s);
+	blockSize = power(properties.b);	
+	properties.hits = 0;
+	properties.misses = 0;
+	properties.evicts = 0;
 	
-	sim_cache = buildCache(numOfSets, par.E, blockSize);
+	simCache = buildCache(numOfSets, properties.E, blockSize);
  	
 	// fill in rest of the simulator routine
 	read_trace  = fopen(trace_file, "r");
@@ -264,14 +263,14 @@ int main(int argc, char **argv)
 				case 'I':
 					break;
 				case 'L':
-					par = run_sim(sim_cache, par, address);
+					properties = run_sim(simCache, properties, address);
 					break;
 				case 'S':
-					par = run_sim(sim_cache, par, address);
+					properties = run_sim(simCache, properties, address);
 					break;
 				case 'M':
-					par = run_sim(sim_cache, par, address);
-					par = run_sim(sim_cache, par, address);	
+					properties = run_sim(simCache, properties, address);
+					properties = run_sim(simCache, properties, address);	
 					break;
 				default:
 					break;
@@ -280,8 +279,8 @@ int main(int argc, char **argv)
 	}
 	
 	
-    printSummary(par.hits, par.misses, par.evicts);
-	cleanup(sim_cache, numOfSets, par.E, blockSize);
+    printSummary(properties.hits, properties.misses, properties.evicts);
+	cleanup(simCache, numOfSets, properties.E, blockSize);
 	fclose(read_trace);
 
     return 0;
