@@ -155,33 +155,29 @@ cacheProperties run_sim(cache simCache, cacheProperties properties, unsigned lon
 		} 
 		else 
 		{
-			//Data is in cache
 			return properties;
 		}
 
 		//We missed, so evict if necessary and write data into cache.
 		
 		int *used_lines = (int*) malloc(sizeof(int) * 2);
-		int min_used_index = find_evict_line(set_, properties, used_lines);	
+		int index = findLine2Evict(set_, properties, used_lines);	
 
 		if (cache_full) 
 		{
 			properties.evicts++;
-
 			//Found least-recently-used line, overwrite it.
-			set_.lines[min_used_index].tag = inputTag;
-			set_.lines[min_used_index].lastUsed = used_lines[1] + 1;
-		
+			set_.lines[index].tag = inputTag;
+			set_.lines[index].lastUsed = used_lines[1] + 1;
 		}
-
 		else
-	        {
-			int empty_index = findEmptyLine(set_, properties);
+	    {
+			int empty = findEmptyLine(set_, properties);
 
 			//Found first empty line, write to it.
-			set_.lines[empty_index].tag = inputTag;
-			set_.lines[empty_index].validBit = 1;
-			set_.lines[empty_index].lastUsed = used_lines[1] + 1;
+			set_.lines[empty].tag = inputTag;
+			set_.lines[empty].validBit = 1;
+			set_.lines[empty].lastUsed = used_lines[1] + 1;
 		}						
 
 		free(used_lines);
